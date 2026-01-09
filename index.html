@@ -3,154 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Character Skills Viewer</title>
+    <title>Batman Board Game Skills</title>
     <style>
-        /* --- STYLING --- */
-        body { margin: 0; padding: 0; background: #222; font-family: sans-serif; color: white; overflow: hidden; }
+        body { margin: 0; padding: 0; background: #1a1a1a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: white; overflow: hidden; }
         
-        /* Het Selectie Scherm */
+        /* Selectiescherm */
         #selection-screen {
             display: flex; flex-direction: column; height: 100vh; padding: 20px; box-sizing: border-box; overflow-y: auto;
+            align-items: center;
         }
-        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 20px; color: #f0f0f0; }
+        h1 { margin-bottom: 30px; color: #00d4ff; text-shadow: 0 0 10px rgba(0,212,255,0.5); }
         
-        .char-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; padding-bottom: 80px;
+        .dropdown-container {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px;
         }
+        @media (max-width: 400px) { .dropdown-container { grid-template-columns: 1fr; } }
+
+        .select-group { display: flex; flex-direction: column; }
+        label { font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
         
-        .char-item {
-            cursor: pointer; position: relative; border-radius: 8px; overflow: hidden; border: 2px solid transparent; transition: 0.2s;
-        }
-        .char-item img { width: 100%; height: auto; display: block; opacity: 0.6; }
-        .char-item.selected { border-color: #00d4ff; box-shadow: 0 0 10px #00d4ff; }
-        .char-item.selected img { opacity: 1; }
-        
-        /* Start Knop */
-        #start-btn {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background: #00d4ff; color: #000; padding: 15px 40px; border: none; border-radius: 30px;
-            font-size: 1.2rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            display: none; /* Verborgen tot er iets is geselecteerd */
+        input {
+            padding: 12px; border-radius: 8px; border: 1px solid #444; background: #333; color: white;
+            font-size: 1rem; width: 100%; box-sizing: border-box;
         }
 
-        /* Het Swipe Scherm (Carousel) */
-        #carousel-screen {
-            display: none; /* Verborgen bij start */
-            width: 100vw; height: 100vh; background: #000;
+        #start-btn {
+            margin-top: 40px; background: #00d4ff; color: #000; padding: 15px 60px; border: none; 
+            border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,212,255,0.3); transition: 0.3s;
         }
-        
+        #start-btn:hover { transform: scale(1.05); background: #00e5ff; }
+
+        /* Swipe Scherm */
+        #carousel-screen { display: none; width: 100vw; height: 100vh; background: #000; }
         .swiper-container {
             display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
-            width: 100%; height: 100%;
-            -webkit-overflow-scrolling: touch; /* Smooth scroll iOS */
+            width: 100%; height: 100%; -webkit-overflow-scrolling: touch;
         }
-        
-        .slide {
-            flex: 0 0 100%; width: 100%; height: 100%;
-            scroll-snap-align: center; display: flex; justify-content: center; align-items: center;
-        }
-        
-        .slide img {
-            max-width: 100%; max-height: 100%; object-fit: contain;
-            border-radius: 8px;
-        }
-
-        /* Terug knop */
-        #back-btn {
-            position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.5); color: white;
-            border: 1px solid white; padding: 8px 15px; border-radius: 5px; cursor: pointer; z-index: 100;
-        }
+        .slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: center; display: flex; justify-content: center; align-items: center; }
+        .slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #back-btn { position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.6); color: white; border: 1px solid #444; padding: 10px 20px; border-radius: 20px; cursor: pointer; z-index: 100; }
     </style>
 </head>
 <body>
 
     <div id="selection-screen">
-        <h1>Kies je Karakters</h1>
-        <div class="char-grid" id="char-grid">
+        <h1>Select Team</h1>
+        <div class="dropdown-container" id="dropdowns">
             </div>
-        <button id="start-btn" onclick="startGame()">Start Spel</button>
+        <button id="start-btn" onclick="startGame()">Start Game</button>
     </div>
 
     <div id="carousel-screen">
-        <button id="back-btn" onclick="resetGame()">&#8592; Menu</button>
-        <div class="swiper-container" id="swiper-wrapper">
-            </div>
+        <button id="back-btn" onclick="resetGame()">← Menu</button>
+        <div class="swiper-container" id="swiper-wrapper"></div>
     </div>
 
+    <datalist id="character-list"></datalist>
+
     <script>
-        // --- CONFIGURATIE ---
-        // Voeg hier je nieuwe afbeeldingen toe. 
-        // 'name' is wat je ziet (optioneel voor alt-text), 'file' is de bestandsnaam in de map 'images'.
-        const characterData = [
-            { name: "Alfred", file: "Skillsheet - Alfred_00000.png" }, // Pas deze namen aan naar jouw bestanden!
-            { name: "Azrael", file: "Skillsheet - Azrael_00000.png" },
-            { name: "Batcow", file: "Skillsheet - Batcow_00000.png" },
-            { name: "Batman",    file: "Skillsheet - Batman_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            { name: "Batman - Trasher Suit",       file: "Skillsheet - Batman - Trasher Suit_00000.png" },
-            { name: "Batman - Year 100",       file: "Skillsheet - Batman - Year 100_00000.png" },
-            { name: "Batman - Zero Year",       file: "Skillsheet - Batman - Zero Year_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            { name: "Batman - The Dark Knight Returns",       file: "Skillsheet - Batman - The Dark Knight Returns_00000.png" },
-            // Kopieer een regel hierboven om er meer toe te voegen
+        // De lijst met ruwe bestandsnamen
+        const rawFiles = [
+            "Skillsheet - Alfred_00000.png", "Skillsheet - Azrael_00000.png", "Skillsheet - Batcow_00000.png",
+            "Skillsheet - Batman_00000.png", "Skillsheet - Batman - The Dark Knight Returns_00000.png",
+            "Skillsheet - Batman - Trasher Suit_00000.png", "Skillsheet - Batman - Year 100_00000.png",
+            "Skillsheet - Batman - Zero Year_00000.png", "Skillsheet - Batwing_00000.png",
+            "Skillsheet - Batwoman_00000.png", "Skillsheet - Blue Bird_00000.png", "Skillsheet - Bruce Wayne_00000.png",
+            "Skillsheet - Catwoman - The long Halloween_00000.png", "Skillsheet - Catwoman_00000.png",
+            "Skillsheet - Clayface - Detective comics_00000.png", "Skillsheet - Duke_00000.png",
+            "Skillsheet - Green Arrow_00000.png", "Skillsheet - Julia Pennyworth_00000.png",
+            "Skillsheet - Katana_00000.png", "Skillsheet - Nightwing_00000.png", "Skillsheet - Oracle_00000.png",
+            "Skillsheet - Orphan - Cassandra Cain_00000.png", "Skillsheet - Red Hood_00000.png",
+            "Skillsheet - Red Robin_00000.png", "Skillsheet - Robin - Damian Wayne_00000.png",
+            "Skillsheet - Spoiler_00000.png"
         ];
 
-        // --- LOGICA ---
-        const grid = document.getElementById('char-grid');
-        const startBtn = document.getElementById('start-btn');
-        let selectedIndices = new Set();
+        // 1. Verwerk data: Opschonen en Sorteren
+        const characters = rawFiles.map(file => {
+            let name = file.replace("Skillsheet - ", "").replace("_00000.png", "");
+            return { name, file };
+        }).sort((a, b) => a.name.localeCompare(b.name));
 
-        // 1. Genereer de selectie grid
-        characterData.forEach((char, index) => {
-            const div = document.createElement('div');
-            div.className = 'char-item';
-            div.onclick = () => toggleSelection(index, div);
-            
-            // We gebruiken de afbeelding ook als thumbnail
-            const img = document.createElement('img');
-            img.src = `images/${char.file}`;
-            img.alt = char.name;
-            
-            div.appendChild(img);
-            grid.appendChild(div);
+        // 2. Vul de datalist (voor de zoekfunctie)
+        const dataList = document.getElementById('character-list');
+        characters.forEach(char => {
+            const option = document.createElement('option');
+            option.value = char.name;
+            dataList.appendChild(option);
         });
 
-        // 2. Selecteren van karakters
-        function toggleSelection(index, element) {
-            if (selectedIndices.has(index)) {
-                selectedIndices.delete(index);
-                element.classList.remove('selected');
-            } else {
-                selectedIndices.add(index);
-                element.classList.add('selected');
-            }
-            
-            // Toon start knop alleen als er minimaal 1 geselecteerd is
-            startBtn.style.display = selectedIndices.size > 0 ? 'block' : 'none';
+        // 3. Maak de 8 dropdown inputs
+        const dropdownContainer = document.getElementById('dropdowns');
+        for (let i = 1; i <= 8; i++) {
+            const div = document.createElement('div');
+            div.className = 'select-group';
+            div.innerHTML = `
+                <label>Held ${i}</label>
+                <input type="text" list="character-list" placeholder="Typ naam..." id="input-${i}">
+            `;
+            dropdownContainer.appendChild(div);
         }
 
-        // 3. Start het swipe scherm
+        // 4. Start de swipe modus
         function startGame() {
             const swiperWrapper = document.getElementById('swiper-wrapper');
-            swiperWrapper.innerHTML = ''; // Leegmaken
+            swiperWrapper.innerHTML = '';
+            let hasSelection = false;
 
-            // Voeg alleen geselecteerde toe
-            selectedIndices.forEach(index => {
-                const char = characterData[index];
-                const slide = document.createElement('div');
-                slide.className = 'slide';
-                slide.innerHTML = `<img src="images/${char.file}" alt="${char.name}">`;
-                swiperWrapper.appendChild(slide);
-            });
+            for (let i = 1; i <= 8; i++) {
+                const val = document.getElementById(`input-${i}`).value;
+                const char = characters.find(c => c.name === val);
+                
+                if (char) {
+                    const slide = document.createElement('div');
+                    slide.className = 'slide';
+                    slide.innerHTML = `<img src="images/${char.file}" alt="${char.name}">`;
+                    swiperWrapper.appendChild(slide);
+                    hasSelection = true;
+                }
+            }
+
+            if (!hasSelection) {
+                alert("Kies eerst minstens één karakter!");
+                return;
+            }
 
             document.getElementById('selection-screen').style.display = 'none';
             document.getElementById('carousel-screen').style.display = 'block';
         }
 
-        // 4. Terug naar menu
         function resetGame() {
             document.getElementById('carousel-screen').style.display = 'none';
             document.getElementById('selection-screen').style.display = 'flex';
